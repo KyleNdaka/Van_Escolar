@@ -1,3 +1,7 @@
+const authRoutes = require('./routes/authRoutes');
+const motoristaRoutes = require('./routes/motoristaRoutes');
+const escolaRoutes = require('./routes/escolaRoutes');
+const responsavelRoutes = require('./routes/responsavelRoutes');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -13,6 +17,10 @@ app.use(express.json()); // Permite ler JSON enviado no corpo das requisições 
 
 // Rotas da Aplicação
 app.use('/api', alunoRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/motoristas', motoristaRoutes);
+app.use('/api/escolas', escolaRoutes);
+app.use('/api', responsavelRoutes);
 
 // Rota de teste do servidor
 app.get('/', (req, res) => {
