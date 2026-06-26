@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const responsavelController = require('../controllers/responsavelController');
 
-// Rota para cadastrar responsável
-router.post('/responsaveis', responsavelController.cadastrar);
-
-// Rota para listar todos os responsáveis
-router.get('/responsaveis', responsavelController.listarTodos);
+router.get('/', responsavelController.listar);
+router.post('/', responsavelController.cadastrar);
+router.put('/:id', responsavelController.atualizar);     
+router.delete('/:id', responsavelController.deletar);  
 
 module.exports = router;

@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(cors());
+app.use(express.static('public'));
 app.use(express.json()); // Permite ler JSON enviado no corpo das requisições (req.body)
 
 // Rotas da Aplicação

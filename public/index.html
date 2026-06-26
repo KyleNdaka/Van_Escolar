@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Van Escolar - Responsáveis</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background-color: #f4f6f9; }
+        h1, h2 { color: #333; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        label { display:  block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 5px; }
+        button:hover { background-color: #0056b3; }
+        button.btn-danger { background-color: #dc3545; }
+        button.btn-danger:hover { background-color: #bd2130; }
+        button.btn-warning { background-color: #ffc107; color: #212529; }
+        button.btn-warning:hover { background-color: #e0a800; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+
+    <h1>🚐 Sistema de Van Escolar - Painel Administrativo</h1>
+
+    <div class="box">
+        <h2 id="tituloForm">🧑‍💻 Cadastrar Novo Responsável</h2>
+        <form id="formResponsavel">
+            <input type="hidden" id="idResponsavel"> <div class="form-group">
+                <label>Nome:</label>
+                <input type="text" id="nome" required>
+            </div>
+            <div class="form-group">
+                <label>CPF:</label>
+                <input type="text" id="cpf" required>
+            </div>
+            <div class="form-group">
+                <label>Telefone:</label>
+                <input type="text" id="telefone">
+            </div>
+            <div class="form-group">
+                <label>E-mail:</label>
+                <input type="email" id="email" required>
+            </div>
+            <div id="campoSenha" class="form-group">
+                <label>Senha:</label>
+                <input type="password" id="senha">
+            </div>
+            <button type="submit" id="btnSalvar">Salvar Responsável</button>
+            <button type="button" id="btnCancelar" style="display: none; background-color: #6c757d;">Cancelar Edição</button>
+        </form>
+    </div>
+
+    <div class="box">
+        <h2>📋 Responsáveis Cadastrados</h2>
+        <button id="btnAtualizar">Atualizar Lista</button>
+        <table id="tabelaResponsaveis">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Telefone</th>
+                    <th>E-mail</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+    const API_URL = 'http://localhost:3000/api/responsaveis';
+    let listaResponsaveisGlobal = []; // Guarda os dados vindos do banco
+
+    // 1. CONSULTA (READ)
+    async function carregarResponsaveis() {
+        try {
+            const response = await fetch(API_URL);
+            if (!response.ok) throw new Error('Erro na requisição da API');
+            
+            listaResponsaveisGlobal = await response.json();
+            
+            const tbody = document.querySelector('#tabelaResponsaveis tbody');
+            tbody.innerHTML = ''; 
+
+            listaResponsaveisGlobal.forEach(resp => {
+                const idAtual = resp.id_responsavel || resp.id;
+                
+                const linha = `
+                    <tr>
+                        <td>${idAtual}</td>
+                        <td>${resp.nome || ''}</td>
+                        <td>${resp.cpf || ''}</td>
+                        <td>${resp.telefone || ''}</td>
+                        <td>${resp.email || ''}</td>
+                        <td>
+                            <button class="btn-warning" onclick="prepararEdicao(${idAtual})">Editar</button>
+                            <button class="btn-danger" onclick="excluirResponsavel(${idAtual})">Excluir</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += linha;
+            });
+        } catch (error) {
+            console.error('Erro detalhado:', error);
+            alert('Erro ao buscar dados do servidor. Verifique se o banco MySQL e o servidor Node estão ligados!');
+        }
+    }
+
+    // Prepara a tela para modo Edição buscando direto do array global pelo ID (Evita quebra de strings)
+    function prepararEdicao(id) {
+        const resp = listaResponsaveisGlobal.find(item => (item.id_responsavel || item.id) === id);
+        if (!resp) return;
+
+        document.getElementById('idResponsavel').value = id;
+        document.getElementById('nome').value = resp.nome || '';
+        document.getElementById('cpf').value = resp.cpf || '';
+        document.getElementById('telefone').value = resp.telefone || '';
+        document.getElementById('email').value = resp.email || '';
+
+        document.getElementById('tituloForm').innerText = '📝 Editar Responsável (ID: ' + id + ')';
+        document.getElementById('btnSalvar').innerText = 'Salvar Alterações';
+        document.getElementById('campoSenha').style.display = 'none'; 
+        document.getElementById('btnCancelar').style.display = 'inline-block';
+    }
+
+    // 2. INCLUSÃO (CREATE) / ALTERAÇÃO (UPDATE)
+    document.getElementById('formResponsavel').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById('idResponsavel').value;
+        const dadosForm = {
+            nome: document.getElementById('nome').value,
+            cpf: document.getElementById('cpf').value,
+            telefone: document.getElementById('telefone').value,
+            email: document.getElementById('email').value
+        };
+
+        let url = API_URL;
+        let metodo = 'POST';
+
+        if (id) {
+            url = `${API_URL}/${id}`;
+            metodo = 'PUT';
+        } else {
+            dadosForm.senha_hash = document.getElementById('senha').value;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosForm)
+            });
+
+            const resultado = await response.json();
+
+            if (response.ok) {
+                alert(id ? 'Responsável atualizado com sucesso! 📝' : 'Responsável cadastrado com sucesso! 🎉');
+                resetarFormulario();
+                carregarResponsaveis();
+            } else {
+                alert('Erro: ' + resultado.error);
+            }
+        } catch (error) {
+            alert('Erro ao conectar ao servidor.');
+        }
+    });
+
+    // 3. EXCLUSÃO (DELETE)
+    async function excluirResponsavel(id) {
+        if (confirm('Tem certeza que deseja excluir este responsável?')) {
+            try {
+                const response = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+                const resultado = await response.json();
+
+                if (response.ok) {
+                    alert('Responsável removido com sucesso! ❌');
+                    carregarResponsaveis();
+                } else {
+                    alert('Erro: ' + resultado.error);
+                }
+            } catch (error) {
+                alert('Erro ao deletar.');
+            }
+        }
+    }
+
+    function resetarFormulario() {
+        document.getElementById('formResponsavel').reset();
+        document.getElementById('idResponsavel').value = '';
+        document.getElementById('tituloForm').innerText = '🧑‍💻 Cadastrar Novo Responsável';
+        document.getElementById('btnSalvar').innerText = 'Salvar Responsável';
+        document.getElementById('campoSenha').style.display = 'block';
+        document.getElementById('btnCancelar').style.display = 'none';
+    }
+
+    document.getElementById('btnCancelar').addEventListener('click', resetarFormulario);
+    document.getElementById('btnAtualizar').addEventListener('click', carregarResponsaveis);
+
+    // Inicializa a tabela ao abrir a página
+    carregarResponsaveis();
+</script>
+</body>
+</html>

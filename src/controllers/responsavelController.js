@@ -1,49 +1,81 @@
 const db = require('../config/database');
-const bcrypt = require('bcrypt'); // Importa o bcrypt
+const bcrypt = require('bcrypt');
 
 const responsavelController = {
-  // 1. Cadastrar um novo Responsável com senha segura
-  cadastrar: async (req, res) => {
-    try {
-      const { nome, cpf, telefone, email, senha_hash } = req.body;
+    // 1. CONSULTA (READ)
+    listar: async (req, res) => {
+        try {
+            const [rows] = await db.query('SELECT id_responsavel, nome, cpf, telefone, email FROM responsaveis');
+            return res.json(rows);
+        } catch (err) {
+            return res.status(500).json({ error: 'Erro ao buscar responsáveis.' });
+        }
+    },
 
-      if (!nome || !cpf || !email || !senha_hash) {
-        return res.status(400).json({ error: 'Os campos nome, cpf, email e senha_hash são obrigatórios.' });
-      }
+    // 2. INCLUSÃO (CREATE)
+    cadastrar: async (req, res) => {
+        try {
+            const { nome, cpf, telefone, email, senha_hash } = req.body;
 
-      // Criptografa a senha antes de mandar para o banco (10 é o nível de segurança)
-      const senhaCriptografada = await bcrypt.hash(senha_hash, 10);
+            if (!nome || !cpf || !email || !senha_hash) {
+                return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+            }
 
-      const query = 'INSERT INTO responsaveis (nome, cpf, telefone, email, senha_hash) VALUES (?, ?, ?, ?, ?)';
-      
-      // Guardamos a 'senhaCriptografada' no lugar da senha original
-      const [result] = await db.query(query, [nome, cpf, telefone, email, senhaCriptografada]);
-      
-      return res.status(201).json({ 
-        message: 'Responsável cadastrado com segurança! 🧑‍💻🔐', 
-        id_responsavel: result.insertId 
-      });
+            // Criptografa a senha antes de salvar
+            const saltRounds = 10;
+            const hash = await bcrypt.hash(senha_hash, saltRounds);
 
-    } catch (err) {
-      console.error('Erro ao cadastrar responsável:', err);
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(400).json({ error: 'Este CPF ou E-mail já está cadastrado no sistema!' });
-      }
-      return res.status(500).json({ error: 'Erro interno no servidor ao salvar.' });
+            const query = 'INSERT INTO responsaveis (nome, cpf, telefone, email, senha_hash) VALUES (?, ?, ?, ?, ?)';
+            const [result] = await db.query(query, [nome, cpf, telefone, email, hash]);
+
+            return res.status(201).json({ 
+                message: 'Responsável cadastrado com segurança! 🔒👤', 
+                id_responsavel: result.insertId 
+            });
+        } catch (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ error: 'E-mail ou CPF já cadastrado.' });
+            }
+            return res.status(500).json({ error: 'Erro ao cadastrar responsável.' });
+        }
+    },
+
+    // 3. ALTERAÇÃO (UPDATE)
+    atualizar: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { nome, cpf, telefone, email } = req.body;
+
+            const query = 'UPDATE responsaveis SET nome = ?, cpf = ?, telefone = ?, email = ? WHERE id_responsavel = ?';
+            const [result] = await db.query(query, [nome, cpf, telefone, email, id]);
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: 'Responsável não encontrado.' });
+            }
+
+            return res.json({ message: 'Responsável atualizado com sucesso! 📝' });
+        } catch (err) {
+            return res.status(500).json({ error: 'Erro ao atualizar responsável.' });
+        }
+    },
+
+    // 4. EXCLUSÃO (DELETE)
+    deletar: async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            const query = 'DELETE FROM responsaveis WHERE id_responsavel = ?';
+            const [result] = await db.query(query, [id]);
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ error: 'Responsável não encontrado.' });
+            }
+
+            return res.json({ message: 'Responsável excluído com sucesso! ❌' });
+        } catch (err) {
+            return res.status(500).json({ error: 'Erro ao excluir responsável.' });
+        }
     }
-  },
-
-  // 2. Listar todos os Responsáveis
-  listarTodos: async (req, res) => {
-    try {
-      const query = 'SELECT id_responsavel, nome, cpf, telefone, email FROM responsaveis';
-      const [results] = await db.query(query);
-      return res.status(200).json(results);
-    } catch (err) {
-      console.error('Erro ao listar responsáveis:', err);
-      return res.status(500).json({ error: 'Erro interno no servidor ao buscar.' });
-    }
-  }
 };
 
 module.exports = responsavelController;
